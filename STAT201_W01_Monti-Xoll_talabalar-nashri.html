@@ -1,0 +1,625 @@
+<!DOCTYPE html>
+<html lang="uz">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Uchta eshik — Monti Xoll muammosi · STAT201 · 1-dars</title>
+<style>
+  :root{
+    --stage:#0B1B2B;          /* qorongʻi sahna */
+    --panel:#14314F;          /* kurs navy */
+    --panel-2:#1B4066;
+    --teal:#2FA8B3;           /* kurs teal, qoraga moslangan */
+    --teal-deep:#0E7C86;
+    --amber:#E8A33D;          /* kurs amber, qoraga moslangan */
+    --amber-deep:#B26B00;
+    --rust:#D4653A;
+    --mist:#F2F5F7;
+    --slate:#9FB0BF;
+    --ok:#5BBB7B;
+    --door-w:170px;
+    --door-h:280px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{
+    background:var(--stage);
+    color:var(--mist);
+    font-family:-apple-system, "Segoe UI", Roboto, "Noto Sans", Arial, sans-serif;
+    overflow:hidden;
+  }
+  /* ---------- slayd tizimi ---------- */
+  .slide{
+    position:absolute;inset:0;
+    display:none;
+    flex-direction:column;align-items:center;justify-content:center;
+    padding:4vh 6vw 9vh;
+    text-align:center;
+  }
+  .slide.active{display:flex;animation:slidein .45s ease}
+  @keyframes slidein{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.01s !important;transition-duration:.01s !important}
+  }
+  h1{font-size:clamp(2.2rem,5.2vw,4.2rem);font-weight:800;letter-spacing:-.02em;line-height:1.08}
+  h2{font-size:clamp(1.7rem,3.6vw,2.9rem);font-weight:800;letter-spacing:-.01em;line-height:1.15}
+  .kicker{color:var(--teal);font-weight:700;font-size:clamp(.95rem,1.5vw,1.25rem);margin-bottom:1rem}
+  .lead{font-size:clamp(1.15rem,2vw,1.6rem);color:var(--mist);max-width:58ch;line-height:1.5;margin-top:1.2rem}
+  .muted{color:var(--slate)}
+  .accent{color:var(--amber)}
+  .tealtx{color:var(--teal)}
+
+  /* ---------- boshqaruv paneli ---------- */
+  #hud{
+    position:fixed;left:0;right:0;bottom:0;height:52px;
+    display:flex;align-items:center;gap:14px;padding:0 18px;
+    background:rgba(11,27,43,.92);border-top:1px solid #22405C;
+    font-size:.85rem;color:var(--slate);z-index:50;
+  }
+  #hud .pill{background:var(--panel);border:1px solid #2A4A68;border-radius:999px;padding:4px 12px;white-space:nowrap}
+  #hud .timing{color:var(--amber)}
+  #hud .spacer{flex:1}
+  #hud button{
+    background:var(--panel);color:var(--mist);border:1px solid #2A4A68;border-radius:8px;
+    padding:6px 12px;font-size:.85rem;cursor:pointer
+  }
+  #hud button:hover{background:var(--panel-2)}
+
+  /* ---------- maʼruzachi izohlari ---------- */
+  #notes{
+    position:fixed;left:0;right:0;bottom:52px;max-height:44vh;overflow:auto;
+    background:#0F2436;border-top:3px solid var(--amber-deep);
+    padding:18px 26px 22px;z-index:49;display:none;text-align:left;
+    box-shadow:0 -12px 40px rgba(0,0,0,.5);
+  }
+  #notes.open{display:block}
+  #notes h3{color:var(--amber);font-size:1rem;margin-bottom:.5rem}
+  #notes .note-body{color:var(--mist);font-size:.98rem;line-height:1.55;max-width:90ch}
+  #notes .note-body b{color:var(--teal)}
+  #notes .note-body ul{margin:.4rem 0 .4rem 1.2rem}
+  #notes .note-body li{margin:.25rem 0}
+
+  /* ---------- tugmalar ---------- */
+  .btn{
+    display:inline-block;border:none;border-radius:14px;cursor:pointer;
+    font-weight:800;letter-spacing:.01em;
+    padding:16px 34px;font-size:clamp(1.05rem,1.8vw,1.4rem);
+    color:#08141F;background:var(--teal);
+    transition:transform .12s ease, filter .12s ease;
+  }
+  .btn:hover{transform:translateY(-2px);filter:brightness(1.08)}
+  .btn:focus-visible{outline:3px solid var(--amber);outline-offset:3px}
+  .btn.amber{background:var(--amber)}
+  .btn.ghost{background:transparent;color:var(--mist);border:2px solid #35597B}
+  .btn.big{padding:22px 48px;font-size:clamp(1.3rem,2.4vw,1.9rem);border-radius:18px}
+  .btn:disabled{opacity:.35;cursor:not-allowed;transform:none}
+
+  /* ---------- eshiklar ---------- */
+  .doors{display:flex;gap:clamp(18px,4vw,56px);margin:2.2rem 0 1rem;perspective:1400px}
+  .door-slot{position:relative;width:var(--door-w);height:var(--door-h)}
+  .door-frame{
+    position:absolute;inset:0;border-radius:10px 10px 4px 4px;
+    background:linear-gradient(180deg,#1B4066,#122C47);
+    border:3px solid #2A4A68;
+    display:flex;align-items:center;justify-content:center;
+    font-size:74px;overflow:hidden;
+  }
+  .door-frame .prize{transform:scale(.4);opacity:0;transition:transform .5s ease,opacity .5s ease}
+  .door-slot.open .prize{transform:scale(1);opacity:1}
+  .door{
+    position:absolute;inset:0;border-radius:10px 10px 4px 4px;
+    background:linear-gradient(180deg,#0E7C86,#0A5A62);
+    border:3px solid #12333F;
+    transform-origin:left center;
+    transition:transform .7s cubic-bezier(.6,.05,.3,1);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;
+    cursor:pointer;backface-visibility:hidden;
+  }
+  .door .num{font-size:64px;font-weight:800;color:var(--mist)}
+  .door .knob{width:14px;height:14px;border-radius:50%;background:var(--amber);position:absolute;right:12px;top:50%}
+  .door-slot.open .door{transform:rotateY(-108deg)}
+  .door-slot.picked .door{box-shadow:0 0 0 5px var(--amber),0 0 40px rgba(232,163,61,.45)}
+  .door-slot.dim .door{filter:brightness(.5)}
+  .door-slot.win .door-frame{box-shadow:0 0 0 5px var(--amber),0 0 60px rgba(232,163,61,.6)}
+  .door:focus-visible{outline:4px solid var(--amber);outline-offset:4px}
+  .door[aria-disabled="true"]{cursor:default}
+  .door-label{position:absolute;left:0;right:0;bottom:-34px;color:var(--slate);font-size:.9rem}
+
+  /* ---------- oʻyin matni va hisob ---------- */
+  #game-question{min-height:3.2em;font-size:clamp(1.3rem,2.6vw,2.1rem);font-weight:800;margin-top:1.4rem}
+  #game-question .sub{display:block;font-size:.62em;font-weight:600;color:var(--slate);margin-top:.4em}
+  #game-controls{display:flex;gap:20px;justify-content:center;margin-top:1.4rem;min-height:76px;flex-wrap:wrap}
+  #tally{
+    display:flex;gap:26px;justify-content:center;margin-top:1.6rem;
+    font-size:1rem;color:var(--slate)
+  }
+  #tally b{color:var(--mist)}
+
+  /* ---------- konfeti ---------- */
+  .confetti{position:absolute;width:10px;height:16px;top:-20px;border-radius:2px;z-index:40;
+    animation:fall linear forwards}
+  @keyframes fall{to{transform:translateY(110vh) rotate(720deg);opacity:.2}}
+
+  /* ---------- simulyatsiya ---------- */
+  #simwrap{display:flex;gap:clamp(24px,4vw,64px);align-items:flex-end;margin-top:1.6rem;flex-wrap:wrap;justify-content:center}
+  .simbar-col{display:flex;flex-direction:column;align-items:center;gap:10px}
+  .simbar-outer{width:clamp(90px,10vw,140px);height:300px;background:var(--panel);border-radius:12px;border:1px solid #2A4A68;display:flex;align-items:flex-end;overflow:hidden}
+  .simbar{width:100%;height:0%;transition:height .25s ease;border-radius:0}
+  #bar-stay{background:linear-gradient(180deg,#4C6B87,#35597B)}
+  #bar-switch{background:linear-gradient(180deg,var(--amber),var(--amber-deep))}
+  .simpct{font-size:clamp(1.6rem,3vw,2.4rem);font-weight:800}
+  .simlab{color:var(--slate);font-size:1rem}
+  .simcount{color:var(--slate);font-size:.9rem}
+  #simchart{background:var(--panel);border:1px solid #2A4A68;border-radius:12px}
+  #simbuttons{display:flex;gap:14px;justify-content:center;margin-top:1.6rem;flex-wrap:wrap}
+  #simtotal{margin-top:1rem;color:var(--slate)}
+  #simtotal b{color:var(--amber);font-size:1.2em}
+
+  /* ---------- 3 ssenariy jadvali ---------- */
+  .scengrid{display:grid;grid-template-columns:auto 1fr 1fr;gap:10px 16px;margin-top:2rem;
+    font-size:clamp(1rem,1.8vw,1.35rem);align-items:center}
+  .scengrid .hd{color:var(--slate);font-weight:700;font-size:.85em}
+  .scen-cell{background:var(--panel);border:1px solid #2A4A68;border-radius:12px;padding:14px 18px;min-width:200px}
+  .scen-cell.win{border-color:var(--amber);box-shadow:0 0 0 2px rgba(232,163,61,.35)}
+  .scen-doors{font-size:1.5em;letter-spacing:.15em}
+  .fracline{display:flex;gap:40px;justify-content:center;margin-top:2.2rem;font-size:clamp(1.2rem,2.2vw,1.7rem);font-weight:800}
+  .fracline .stay{color:var(--slate)}
+  .fracline .switch{color:var(--amber)}
+
+  /* ---------- 1/3 va 2/3 vizual ---------- */
+  .probsplit{display:flex;width:min(760px,86vw);height:88px;border-radius:14px;overflow:hidden;margin-top:2rem;font-weight:800;font-size:clamp(1.1rem,2vw,1.5rem)}
+  .probsplit .p13{flex:1;background:#35597B;display:flex;align-items:center;justify-content:center}
+  .probsplit .p23{flex:2;background:var(--amber-deep);display:flex;align-items:center;justify-content:center}
+
+  /* ---------- vaqt chizigʻi ---------- */
+  .timeline{display:flex;flex-direction:column;gap:0;margin-top:2rem;text-align:left;max-width:820px}
+  .tl-item{display:grid;grid-template-columns:110px 22px 1fr;gap:0 18px;align-items:start}
+  .tl-year{color:var(--amber);font-weight:800;font-size:1.15rem;text-align:right;padding-top:2px}
+  .tl-rail{position:relative;display:flex;justify-content:center}
+  .tl-dot{width:14px;height:14px;border-radius:50%;background:var(--teal);margin-top:6px;z-index:1}
+  .tl-item:not(:last-child) .tl-rail::after{content:"";position:absolute;top:20px;bottom:-6px;width:3px;background:#2A4A68}
+  .tl-body{padding-bottom:26px}
+  .tl-body b{color:var(--mist)}
+  .tl-body p{color:var(--slate);line-height:1.5;margin-top:.2rem;font-size:1.02rem}
+  .anek{display:inline-block;background:#3A2C14;color:var(--amber);border:1px solid #5C4520;border-radius:6px;
+    font-size:.72rem;font-weight:700;padding:2px 8px;margin-left:6px;vertical-align:middle}
+
+  /* ---------- muhokama kartalari ---------- */
+  .qgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:18px;margin-top:2rem;max-width:1000px}
+  .qcard{background:var(--panel);border:1px solid #2A4A68;border-left:5px solid var(--teal);
+    border-radius:12px;padding:20px 22px;text-align:left;font-size:clamp(1.05rem,1.7vw,1.3rem);line-height:1.45;font-weight:600}
+
+  /* ---------- pipeline ---------- */
+  .pipeline{display:flex;align-items:center;gap:8px;margin-top:2.4rem;flex-wrap:wrap;justify-content:center}
+  .pipe-step{background:var(--panel);border:1px solid #2A4A68;border-radius:12px;padding:14px 20px;
+    font-weight:800;font-size:clamp(1rem,1.8vw,1.35rem)}
+  .pipe-step:last-child{background:var(--amber);color:#08141F;border-color:var(--amber)}
+  .pipe-arrow{color:var(--teal);font-size:1.4rem;font-weight:800}
+
+  /* ---------- roʻyxatlar ---------- */
+  ul.nice{list-style:none;text-align:left;margin-top:1.6rem;max-width:62ch}
+  ul.nice li{padding:.42rem 0 .42rem 2rem;position:relative;font-size:clamp(1.05rem,1.8vw,1.35rem);line-height:1.4}
+  ul.nice li::before{content:"";position:absolute;left:.4rem;top:.95em;width:.55em;height:.55em;border-radius:50%;background:var(--teal)}
+  ul.nice li.amberli::before{background:var(--amber)}
+
+  /* ---------- ovoz berish sozlamalari ---------- */
+  .setupbox{background:var(--panel);border:1px solid #2A4A68;border-radius:14px;padding:22px 26px;
+    text-align:left;max-width:860px;margin-top:1.4rem}
+  .setupbox ol{margin-left:1.3rem}
+  .setupbox li{margin:.5rem 0;line-height:1.5;font-size:1.02rem}
+  .joincode{
+    display:inline-block;background:#08141F;border:2px dashed var(--teal);border-radius:10px;
+    padding:8px 18px;font-size:1.4rem;font-weight:800;color:var(--amber);min-width:150px
+  }
+  .joincode:focus-visible{outline:3px solid var(--amber);outline-offset:2px}
+  .votebadge{
+    display:inline-flex;align-items:center;gap:10px;background:#0F2A20;border:1px solid #1E5C42;
+    color:#7BD8A8;border-radius:999px;padding:8px 18px;font-weight:700;margin-top:1.4rem;font-size:1rem
+  }
+  .votebadge .dot{width:10px;height:10px;border-radius:50%;background:#5BBB7B;animation:pulse 1.4s infinite}
+  @keyframes pulse{50%{opacity:.3}}
+
+  .onlyteacher{position:absolute;top:16px;right:20px;background:var(--rust);color:#fff;
+    font-size:.75rem;font-weight:800;border-radius:6px;padding:4px 10px;letter-spacing:.03em}
+
+  /* ---------- yordam qatlami ---------- */
+  #help{
+    position:fixed;inset:0;background:rgba(5,12,20,.9);z-index:60;display:flex;
+    align-items:center;justify-content:center;flex-direction:column;gap:14px;text-align:center
+  }
+  #help h2{margin-bottom:.6rem}
+  #help .keys{display:grid;grid-template-columns:auto auto;gap:10px 22px;text-align:left;font-size:1.05rem}
+  #help kbd{background:var(--panel);border:1px solid #35597B;border-radius:6px;padding:2px 10px;font-family:inherit;font-weight:800;color:var(--amber)}
+  #help.hidden,#notes.hidden{display:none}
+</style>
+</head>
+<body>
+<!-- ============ YORDAM QATLAMI ============ -->
+<div id="help">
+  <h2>Boshqaruv</h2>
+  <div class="keys">
+    <div><kbd>→</kbd> / <kbd>←</kbd></div><div>keyingi / oldingi slayd</div>
+    <div><kbd>F</kbd></div><div>toʻliq ekran rejimi</div>
+    <div><kbd>H</kbd></div><div>shu yordam oynasi</div>
+  </div>
+  <p class="muted" style="margin-top:1rem">Oʻyinni istalgancha takrorlashingiz va simulyatsiyani oʻzingiz ishga tushirishingiz mumkin.</p>
+  <button class="btn amber" onclick="document.getElementById('help').classList.add('hidden')">Boshlaymiz</button>
+</div>
+
+<!-- ============ 0 · MUQOVA ============ -->
+<section class="slide" data-t="2 daqiqa">
+  <p class="kicker">STAT201 · Ehtimollik va statistika · 1-dars</p>
+  <h1>Uchta eshik.<br>Bitta avtomobil.</h1>
+  <p class="lead">Bugungi darsni maʼruzadan emas — <b class="accent">oʻyindan</b> boshlaymiz.
+  Telefoningiz yoningizda boʻlsin: birozdan soʻng ovoz berasiz.</p>
+  <div class="doors" style="transform:scale(.55);margin:0" aria-hidden="true">
+    <div class="door-slot"><div class="door-frame"></div><div class="door"><span class="num">1</span><span class="knob"></span></div></div>
+    <div class="door-slot"><div class="door-frame"></div><div class="door"><span class="num">2</span><span class="knob"></span></div></div>
+    <div class="door-slot"><div class="door-frame"></div><div class="door"><span class="num">3</span><span class="knob"></span></div></div>
+  </div>
+</section>
+
+<!-- ============ 1 · QOIDALAR ============ -->
+<section class="slide" data-t="2 daqiqa">
+  <p class="kicker">Oʻyin qoidalari</p>
+  <h2>«Let’s Make a Deal» teleoʻyini</h2>
+  <ul class="nice">
+    <li>Uchta yopiq eshik bor. Bittasining ortida — <b class="accent">avtomobil 🚗</b>, ikkitasining ortida — <b>echki 🐐</b>.</li>
+    <li>Siz — guruh boʻlib — bitta eshikni tanlaysiz.</li>
+    <li>Boshlovchi avtomobil qayerdaligini <b class="tealtx">biladi</b> va qolgan ikki eshikdan birini — echkisi borini — ochadi.</li>
+    <li>Soʻng sizga bitta savol beradi. Qanday savol? Hozir bilib olasiz.</li>
+  </ul>
+</section>
+
+<!-- ============ 2 · OVOZ BERISHGA ULANISH ============ -->
+<section class="slide" data-t="2 daqiqa">
+  <p class="kicker">Ovoz berish</p>
+  <h2>Telefoningizni oling 📱</h2>
+  <p class="lead">Brauzerda oching: <b class="tealtx">slido.com</b><br>
+  Kodni kiriting:&nbsp; <span class="joincode" contenteditable="true" spellcheck="false">#KOD</span></p>
+  <p class="muted" style="margin-top:1rem;font-size:1.05rem">Roʻyxatdan oʻtish shart emas — kod kiritasiz va ovoz berasiz.<br>
+  Ekranda QR kod ham koʻrsatiladi (Slido taqdimot rejimida avtomatik chiqadi).</p>
+  <div class="votebadge"><span class="dot"></span> Ovozlar real vaqtda ekranda koʻrinadi</div>
+</section>
+
+<!-- ============ 3 · OʻYIN ============ -->
+<section class="slide" data-t="8–10 daqiqa" id="game-slide">
+  <p class="kicker">Oʻyin boshlandi</p>
+  <div class="doors" id="game-doors">
+    <div class="door-slot" data-d="0">
+      <div class="door-frame"><span class="prize"></span></div>
+      <div class="door" role="button" tabindex="0" aria-label="1-eshik"><span class="num">1</span><span class="knob"></span></div>
+    </div>
+    <div class="door-slot" data-d="1">
+      <div class="door-frame"><span class="prize"></span></div>
+      <div class="door" role="button" tabindex="0" aria-label="2-eshik"><span class="num">2</span><span class="knob"></span></div>
+    </div>
+    <div class="door-slot" data-d="2">
+      <div class="door-frame"><span class="prize"></span></div>
+      <div class="door" role="button" tabindex="0" aria-label="3-eshik"><span class="num">3</span><span class="knob"></span></div>
+    </div>
+  </div>
+  <div id="game-question">Qaysi eshik ortida avtomobil bor deb oʻylaysiz?
+    <span class="sub">Slido’da ovoz bering — koʻpchilik tanlagan eshikni ekranda bosaman</span></div>
+  <div id="game-controls"></div>
+  <div id="tally">
+    <span>Qolish: <b id="t-stay">0 / 0</b></span>
+    <span>Almashtirish: <b id="t-switch">0 / 0</b></span>
+  </div>
+</section>
+
+<!-- ============ 4 · SEZGI ============ -->
+<section class="slide" data-t="2 daqiqa">
+  <p class="kicker">Bir daqiqa toʻxtaymiz</p>
+  <h2>Koʻpchilik shunday deb oʻylaydi:</h2>
+  <h1 style="margin-top:1.4rem"><span class="muted">«Ikki eshik qoldi —</span><br>demak <span class="accent">50 / 50</span>»</h1>
+  <p class="lead">Mantiqan toʻgʻriga oʻxshaydi-a? Lekin sezgi (intuition) — dalil emas.<br>
+  Javobni aytmaymiz. Avval — <b class="tealtx">tajriba</b>.</p>
+</section>
+
+<!-- ============ 5 · SIMULYATSIYA ============ -->
+<section class="slide" data-t="4–5 daqiqa" id="sim-slide">
+  <p class="kicker">Simulyatsiya (simulation)</p>
+  <h2>Kompyuter biz uchun minglab marta oʻynasin</h2>
+  <div id="simwrap">
+    <div class="simbar-col">
+      <span class="simpct" id="pct-stay">—</span>
+      <div class="simbar-outer"><div class="simbar" id="bar-stay"></div></div>
+      <span class="simlab">Qolish</span>
+      <span class="simcount" id="cnt-stay">0 yutuq</span>
+    </div>
+    <div class="simbar-col">
+      <span class="simpct accent" id="pct-switch">—</span>
+      <div class="simbar-outer"><div class="simbar" id="bar-switch"></div></div>
+      <span class="simlab">Almashtirish</span>
+      <span class="simcount" id="cnt-switch">0 yutuq</span>
+    </div>
+    <canvas id="simchart" width="520" height="330" aria-label="Yutuq foizining oʻyinlar soni boʻyicha oʻzgarishi"></canvas>
+  </div>
+  <div id="simbuttons">
+    <button class="btn ghost" onclick="runSim(10)">10 oʻyin</button>
+    <button class="btn ghost" onclick="runSim(100)">100 oʻyin</button>
+    <button class="btn" onclick="runSim(1000)">1 000 oʻyin</button>
+    <button class="btn amber" onclick="runSim(10000)">10 000 oʻyin</button>
+    <button class="btn ghost" onclick="resetSim()" style="font-weight:600">Qayta boshlash</button>
+  </div>
+  <p id="simtotal">Jami oʻyinlar: <b>0</b></p>
+</section>
+
+<!-- ============ 6 · NEGA? 3 SSENARIY ============ -->
+<section class="slide" data-t="3 daqiqa">
+  <p class="kicker">Nega shunday? Barcha holatlarni sanaymiz</p>
+  <h2>Faraz: siz <span class="accent">1-eshikni</span> tanladingiz</h2>
+  <div class="scengrid">
+    <span class="hd"></span><span class="hd">Qolsangiz</span><span class="hd">Almashtirsangiz</span>
+    <div class="scen-cell scen-doors">🚗🐐🐐</div>
+    <div class="scen-cell win">🚗 yutasiz</div>
+    <div class="scen-cell">🐐 yutqazasiz</div>
+    <div class="scen-cell scen-doors">🐐🚗🐐</div>
+    <div class="scen-cell">🐐 yutqazasiz</div>
+    <div class="scen-cell win">🚗 yutasiz</div>
+    <div class="scen-cell scen-doors">🐐🐐🚗</div>
+    <div class="scen-cell">🐐 yutqazasiz</div>
+    <div class="scen-cell win">🚗 yutasiz</div>
+  </div>
+  <div class="fracline">
+    <span class="stay">Qolish: 1 / 3</span>
+    <span class="switch">Almashtirish: 2 / 3</span>
+  </div>
+</section>
+
+<!-- ============ 7 · NEGA 50/50 EMAS ============ -->
+<section class="slide" data-t="3 daqiqa">
+  <p class="kicker">Sezgi qayerda adashadi?</p>
+  <h2>Boshlovchi eshikni <span class="accent">tasodifan emas, bilib</span> ochadi</h2>
+  <div class="probsplit" role="img" aria-label="Sizning eshigingiz: uchdan bir. Qolgan ikki eshik birgalikda: uchdan ikki.">
+    <div class="p13">Sizning eshigingiz<br>1/3</div>
+    <div class="p23">Qolgan ikki eshik birgalikda<br>2/3</div>
+  </div>
+  <p class="lead">Dastlab avtomobilni topish ehtimoli (probability) = <b>1/3</b>,<br>
+  u boshqa ikki eshikdan birida boʻlish ehtimoli = <b class="accent">2/3</b>.<br><br>
+  Boshlovchi echkili eshikni ochganda <b>yangi tasodif roʻy bermaydi</b> — u shunchaki
+  2/3 ni <b class="accent">bitta yopiq eshikka jamlab beradi</b>.</p>
+</section>
+
+<!-- ============ 8 · TARIX ============ -->
+<section class="slide" data-t="3 daqiqa">
+  <p class="kicker">Bu muammo qayerdan kelgan?</p>
+  <h2>Butun Amerikani bahslashtirgan savol</h2>
+  <div class="timeline">
+    <div class="tl-item"><span class="tl-year">1963</span><span class="tl-rail"><span class="tl-dot"></span></span>
+      <div class="tl-body"><b>«Let’s Make a Deal» teleoʻyini efirga chiqdi.</b>
+      <p>Boshlovchisi — Monti Xoll (Monty Hall). Oʻyin savdolashuv va eshiklar atrofida qurilgan edi; muammo keyinchalik uning nomi bilan ataldi.</p></div></div>
+    <div class="tl-item"><span class="tl-year">1975</span><span class="tl-rail"><span class="tl-dot"></span></span>
+      <div class="tl-body"><b>Masalaning matematik shakli.</b>
+      <p>Statistik Stiv Selvin (Steve Selvin) «The American Statistician» jurnaliga yozgan xatida masalani rasmiy taʼriflab, «Monti Xoll muammosi» nomini berdi.</p></div></div>
+    <div class="tl-item"><span class="tl-year">1990</span><span class="tl-rail"><span class="tl-dot"></span></span>
+      <div class="tl-body"><b>Merilin vos Savant va «Parade» jurnali.</b>
+      <p>Oʻquvchi savoliga Merilin vos Savant (Marilyn vos Savant) «almashtirish kerak — yutish ehtimoli 2/3» deb javob berdi. Jurnalga minglab norozi xatlar keldi; ular orasida olimlar va matematika oʻqituvchilari ham bor edi. Keyinchalik simulyatsiyalar va sinf tajribalari uning haq ekanini koʻrsatdi.</p></div></div>
+    <div class="tl-item"><span class="tl-year">Bugun</span><span class="tl-rail"><span class="tl-dot"></span></span>
+      <div class="tl-body"><b>Ehtimollik taʼlimining klassik misoli.</b>
+      <p>Rivoyatlarga koʻra, mashhur matematik Pol Erdyosh (Paul Erdős) ham javobga faqat kompyuter simulyatsiyasini koʻrgach ishongan <span class="anek">zamondosh xotirasi</span>. Muammo bugun sezgi va ehtimollik nazariyasi toʻqnashuvining ramziga aylangan.</p></div></div>
+  </div>
+</section>
+
+<!-- ============ 9 · MUHOKAMA ============ -->
+<section class="slide" data-t="3–4 daqiqa">
+  <p class="kicker">Muhokama</p>
+  <h2>Endi birga oʻylaymiz</h2>
+  <div class="qgrid">
+    <div class="qcard">Nima uchun koʻpchiligimiz 50/50 deb oʻylaymiz?</div>
+    <div class="qcard">Nima uchun sezgimiz aynan shu yerda xato qiladi?</div>
+    <div class="qcard">Tajribani 10 000 marta takrorlasak nima sodir boʻladi — va nega 5 marta yetarli emas?</div>
+    <div class="qcard">Statistikada sezgi yetarlimi? Qaror qabul qilishda yana nima kerak?</div>
+  </div>
+</section>
+
+<!-- ============ 10 · KURSGA BOGʻLASH ============ -->
+<section class="slide" data-t="2 daqiqa">
+  <p class="kicker">STAT201 nima haqida?</p>
+  <h2>Statistika bizga nimani oʻrgatadi?</h2>
+  <div class="pipeline">
+    <span class="pipe-step">Savol</span><span class="pipe-arrow">→</span>
+    <span class="pipe-step">Maʼlumot</span><span class="pipe-arrow">→</span>
+    <span class="pipe-step">Ehtimollik</span><span class="pipe-arrow">→</span>
+    <span class="pipe-step">Tahlil</span><span class="pipe-arrow">→</span>
+    <span class="pipe-step">Xulosa</span><span class="pipe-arrow">→</span>
+    <span class="pipe-step">Qaror</span>
+  </div>
+  <ul class="nice" style="margin-top:2rem">
+    <li>Maʼlumot bilan ishlash va oʻzgaruvchanlikni tushunish</li>
+    <li>Noaniqlik sharoitida ehtimollik bilan fikrlash</li>
+    <li>Tanlanma (sample) asosida bosh toʻplam (population) haqida xulosa chiqarish</li>
+    <li>Aldamchi xulosalarni aniqlash va dalillarni baholash</li>
+    <li class="amberli">Maʼlumotga asoslangan yaxshiroq qarorlar qabul qilish</li>
+  </ul>
+</section>
+
+<!-- ============ 11 · YAKUNIY FIKR ============ -->
+<section class="slide" data-t="1 daqiqa">
+  <h1 style="max-width:22ch">«Statistika — bu faqat formulalarni hisoblash emas.</h1>
+  <p class="lead" style="font-size:clamp(1.3rem,2.4vw,1.9rem);margin-top:1.6rem">
+  Statistika — noaniqlik sharoitida maʼlumotlardan foydalanib,<br>
+  <b class="accent">yaxshiroq xulosa va qaror chiqarish sanʼatidir.»</b></p>
+  <p class="muted" style="margin-top:2.4rem">Keyingi dars: maʼlumot turlari va tavsifiy statistika. Eshiklarni esa esdan chiqarmang 🚪</p>
+</section>
+
+<!-- ============ HUD ============ -->
+<div id="hud">
+  <span class="pill" id="slidecount">1 / 13</span>
+  <span class="pill timing" id="slidetime">2 daqiqa</span>
+  <span class="spacer"></span>
+  <span class="muted">← → slaydlar · F — toʻliq ekran · H — yordam</span>
+</div>
+<script>
+"use strict";
+/* ================= SLAYD NAVIGATSIYASI ================= */
+const slides=[...document.querySelectorAll(".slide")];
+let cur=0;
+function show(i){
+  cur=Math.max(0,Math.min(slides.length-1,i));
+  slides.forEach((s,k)=>s.classList.toggle("active",k===cur));
+  document.getElementById("slidecount").textContent=(cur+1)+" / "+slides.length;
+  document.getElementById("slidetime").textContent=slides[cur].dataset.t||"";
+}
+document.addEventListener("keydown",e=>{
+  if(e.target.isContentEditable)return;
+  if(e.key===" "&&e.target!==document.body)return; /* fokusdagi tugma bilan toʻqnashmasin */
+  if(e.key==="ArrowRight"||e.key==="PageDown"||e.key===" "){show(cur+1)}
+  else if(e.key==="ArrowLeft"||e.key==="PageUp"){show(cur-1)}
+  else if(e.key.toLowerCase()==="h"){document.getElementById("help").classList.toggle("hidden")}
+  else if(e.key.toLowerCase()==="f"){
+    document.fullscreenElement?document.exitFullscreen():document.documentElement.requestFullscreen();
+  }
+});
+show(0);
+
+/* ================= OʻYIN ================= */
+const gameSlide=document.getElementById("game-slide");
+const doorSlots=[...document.querySelectorAll("#game-doors .door-slot")];
+const gQ=document.getElementById("game-question");
+const gC=document.getElementById("game-controls");
+let G={};                                   /* oʻyin holati */
+const tally={stay:{w:0,n:0},sw:{w:0,n:0}};  /* strategiyalar hisobi */
+
+function newRound(){
+  G={car:Math.floor(Math.random()*3),picked:null,opened:null,phase:"pick"};
+  doorSlots.forEach(s=>{
+    s.classList.remove("open","picked","dim","win");
+    s.querySelector(".prize").textContent="";
+    s.querySelector(".door").setAttribute("aria-disabled","false");
+  });
+  gQ.innerHTML='Qaysi eshik ortida avtomobil bor deb oʻylaysiz?<span class="sub">Slido’da ovoz bering — koʻpchilik tanlagan eshikni ekranda bosaman</span>';
+  gC.innerHTML="";
+}
+function pickDoor(d){
+  if(G.phase!=="pick")return;
+  G.picked=d;G.phase="host";
+  doorSlots.forEach((s,k)=>s.classList.toggle("picked",k===d));
+  gQ.innerHTML=(d+1)+'-eshik tanlandi.<span class="sub">Boshlovchi avtomobil qayerdaligini biladi…</span>';
+  gC.innerHTML='<button class="btn" onclick="hostOpen()">Boshlovchi eshik ochadi</button>';
+}
+function hostOpen(){
+  if(G.phase!=="host")return;
+  const options=[0,1,2].filter(d=>d!==G.picked&&d!==G.car);
+  G.opened=options[Math.floor(Math.random()*options.length)];
+  G.phase="decide";
+  const s=doorSlots[G.opened];
+  s.querySelector(".prize").textContent="🐐";
+  s.classList.add("open","dim");
+  gQ.innerHTML='<span style="font-size:1.15em">Endi tanlovingizni oʻzgartirasizmi?</span><span class="sub">Slido soʻrovi №2 — soʻng koʻpchilik javobini bosing</span>';
+  gC.innerHTML=
+    '<button class="btn big ghost" onclick="decide(false)">QOLAMAN</button>'+
+    '<button class="btn big amber" onclick="decide(true)">ALMASHTIRAMAN</button>';
+}
+function decide(sw){
+  if(G.phase!=="decide")return;
+  G.phase="done";
+  const other=[0,1,2].find(d=>d!==G.picked&&d!==G.opened);
+  const finalPick=sw?other:G.picked;
+  if(sw){doorSlots.forEach((s,k)=>s.classList.toggle("picked",k===finalPick))}
+  const win=finalPick===G.car;
+  const key=sw?"sw":"stay";
+  tally[key].n++; if(win)tally[key].w++;
+  updateTally();
+  /* barcha eshiklarni ochamiz */
+  setTimeout(()=>{
+    doorSlots.forEach((s,k)=>{
+      s.querySelector(".prize").textContent=(k===G.car)?"🚗":"🐐";
+      s.classList.add("open");
+      if(k===G.car)s.classList.add("win");
+    });
+    gQ.innerHTML=win
+      ?'<span class="accent">🎉 Avtomobil yutildi!</span><span class="sub">Strategiya: '+(sw?"almashtirish":"qolish")+"</span>"
+      :'Bu safar — echki.<span class="sub">Strategiya: '+(sw?"almashtirish":"qolish")+"</span>";
+    gC.innerHTML='<button class="btn" onclick="newRound()">Yana oʻynash</button>';
+    if(win)confetti();
+  },420);
+}
+function updateTally(){
+  document.getElementById("t-stay").textContent=tally.stay.w+" / "+tally.stay.n;
+  document.getElementById("t-switch").textContent=tally.sw.w+" / "+tally.sw.n;
+}
+doorSlots.forEach((s,k)=>{
+  const d=s.querySelector(".door");
+  d.addEventListener("click",()=>pickDoor(k));
+  d.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();pickDoor(k)}});
+});
+newRound();
+function confetti(){
+  const colors=["#E8A33D","#2FA8B3","#F2F5F7","#D4653A","#5BBB7B"];
+  for(let i=0;i<90;i++){
+    const c=document.createElement("div");
+    c.className="confetti";
+    c.style.left=Math.random()*100+"vw";
+    c.style.background=colors[i%colors.length];
+    c.style.animationDuration=(1.6+Math.random()*1.6)+"s";
+    c.style.animationDelay=(Math.random()*.5)+"s";
+    gameSlide.appendChild(c);
+    setTimeout(()=>c.remove(),3600);
+  }
+}
+
+/* ================= SIMULYATSIYA ================= */
+/* Bir oʻyin ikkala strategiya uchun ham sanaladi:
+   qolish yutadi ⇔ dastlabki tanlov = avtomobil (ehtimoli 1/3);
+   almashtirish yutadi ⇔ dastlabki tanlov ≠ avtomobil (ehtimoli 2/3). */
+let S={n:0,stayW:0,swW:0,hist:[]};
+let simBusy=false;
+const fmt=x=>x.toLocaleString("ru-RU");            /* 10 000 koʻrinishida */
+const pct=x=>(100*x).toFixed(1).replace(".",",");  /* oʻnlik vergul */
+function resetSim(){S={n:0,stayW:0,swW:0,hist:[]};simBusy=false;drawSim()}
+function runSim(total){
+  if(simBusy)return;simBusy=true;
+  const chunk=Math.max(1,Math.floor(total/60));
+  let done=0;
+  (function step(){
+    const k=Math.min(chunk,total-done);
+    for(let i=0;i<k;i++){
+      const car=Math.floor(Math.random()*3), pick=Math.floor(Math.random()*3);
+      S.n++;
+      if(pick===car)S.stayW++; else S.swW++;
+    }
+    S.hist.push({n:S.n,stay:S.stayW/S.n,sw:S.swW/S.n});
+    done+=k;drawSim();
+    if(done<total)requestAnimationFrame(step); else simBusy=false;
+  })();
+}
+function drawSim(){
+  const stayP=S.n?S.stayW/S.n:0, swP=S.n?S.swW/S.n:0;
+  document.getElementById("bar-stay").style.height=(stayP*100)+"%";
+  document.getElementById("bar-switch").style.height=(swP*100)+"%";
+  document.getElementById("pct-stay").textContent=S.n?pct(stayP)+" %":"—";
+  document.getElementById("pct-switch").textContent=S.n?pct(swP)+" %":"—";
+  document.getElementById("cnt-stay").textContent=fmt(S.stayW)+" yutuq";
+  document.getElementById("cnt-switch").textContent=fmt(S.swW)+" yutuq";
+  document.getElementById("simtotal").innerHTML="Jami oʻyinlar: <b>"+fmt(S.n)+"</b>";
+  /* --- konvergensiya grafigi --- */
+  const cv=document.getElementById("simchart"),ctx=cv.getContext("2d");
+  const W=cv.width,H=cv.height,L=46,R=14,T=18,B=34;
+  ctx.clearRect(0,0,W,H);
+  ctx.font="12px sans-serif";ctx.fillStyle="#9FB0BF";ctx.strokeStyle="#2A4A68";
+  /* oʻqlar va nazariy chiziqlar */
+  const y=v=>T+(1-v)*(H-T-B);
+  [[1/3,"1/3"],[2/3,"2/3"]].forEach(([v,lab])=>{
+    ctx.setLineDash([5,5]);ctx.beginPath();ctx.moveTo(L,y(v));ctx.lineTo(W-R,y(v));ctx.stroke();ctx.setLineDash([]);
+    ctx.fillText(lab,10,y(v)+4);
+  });
+  ctx.beginPath();ctx.moveTo(L,T);ctx.lineTo(L,H-B);ctx.lineTo(W-R,H-B);ctx.stroke();
+  ctx.fillText("Yutuq ulushi",L,12);
+  ctx.fillText("Oʻyinlar soni (log)",W/2-40,H-8);
+  if(S.hist.length<2)return;
+  const maxN=S.hist[S.hist.length-1].n;
+  const x=n=>L+(Math.log10(n)/Math.log10(Math.max(10,maxN)))*(W-L-R);
+  function line(key,color){
+    ctx.strokeStyle=color;ctx.lineWidth=2.5;ctx.beginPath();
+    S.hist.forEach((h,i)=>{const px=x(h.n),py=y(h[key]);i?ctx.lineTo(px,py):ctx.moveTo(px,py)});
+    ctx.stroke();
+  }
+  line("stay","#7C97B0");
+  line("sw","#E8A33D");
+}
+drawSim();
+</script>
+</body>
+</html>
